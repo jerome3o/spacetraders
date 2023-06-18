@@ -21,17 +21,21 @@ def get_waypoint_info(waypoint: str) -> dict:
         f"{_url}/v2/systems/{system}/waypoints/{waypoint}",
         headers={"Authorization": f"Bearer {_token}"},
     )
-    pprint(response.json())
+    return response.json()
 
 
+def get_contracts() -> dict:
+    response = requests.get(
+        "https://api.spacetraders.io/v2/my/contracts",
+        headers={"Authorization": f"Bearer {_token}"},
+    )
+    return response.json()
 
 
 def main():
-    agent_info = get_agent_info()
-    pprint(agent_info)
-
-    headquarters = agent_info["data"]["headquarters"]
-    waypoint_info = get_waypoint_info(headquarters)
+    # agent_info = get_agent_info()
+    # headquarters = agent_info["data"]["headquarters"]
+    pprint(get_contracts())
 
 
 
