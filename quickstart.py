@@ -200,6 +200,30 @@ def ship_is_full(ship_id: str) -> bool:
     return cargo["units"] == cargo["capacity"]
 
 
+def sell_non_contract_goods(ship_id: str, contract_id: str) -> dict:
+    contract_info = get_contract_info(contract_id)
+    ship_info = get_ship_info(ship_id)
+    cargo_info = ship_info["data"]["cargo"]
+
+    relevant_cargo_symbol = contract_info["data"]["terms"]["deliver"][0]["tradeSymbol"]
+
+    for cargo in cargo_info["inventory"]:
+        if cargo["symbol"] != relevant_cargo_symbol:
+            sell_goods(ship_id, cargo["symbol"], cargo["units"])
+
+
+def sell_goods(ship_id: str, symbol: str, units: str) -> dict:
+    response = requests.post(
+        f"{_url}/v2/my/ships/{ship_id}/sell",
+        headers={"Authorization": f"Bearer {_token}"},
+        json={
+            "symbol": symbol,
+            "unit": units,
+        },
+    )
+    return response.json()
+
+
 def contract_automation(
     contract_id: str,
     ship_id: str,
@@ -242,10 +266,9 @@ def contract_automation(
         # dock, deliver, refuel, orbit
         ship_dock(ship_id)
 
-        contract_deliver(
+        contract_deliver_all_available(
             contract_id=contract_id,
             ship_id=ship_id,
-            trade_symbol=contract_info["data"]["terms"]["deliver"][0]["tradeSymbol"],
         )
     # fulfill contract
 
