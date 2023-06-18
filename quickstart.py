@@ -2,7 +2,8 @@ import os
 import json
 import requests
 from typing import Tuple
-from typing import List
+from datetime import datetime, timezone
+import time
 
 _token = os.environ["TOKEN"]
 _url = "https://api.spacetraders.io"
@@ -10,6 +11,18 @@ _url = "https://api.spacetraders.io"
 
 def pprint(data: dict):
     print(json.dumps(data, indent=4))
+
+
+def is_past(timestamp: str) -> bool:
+    datetime_obj = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%fZ")
+    datetime_obj = datetime_obj.replace(tzinfo=timezone.utc)
+    current_time = datetime.now(timezone.utc)
+    return current_time > datetime_obj
+
+def wait_until(timestamp: str):
+    while not is_past(timestamp):
+        time.sleep(10)
+
 
 
 def get_waypoint_components(waypoint: str) -> Tuple[str, str]:
@@ -174,7 +187,7 @@ def get_contract_info(contract_id: str) -> dict:
 def contract_is_complete(contract_id: str) -> bool:
     contract = get_contract_info(contract_id)
 
-    deliver_details = contract["data"]["terms"]["deliver"]
+    deliver_details = contract["data"][0]["terms"]["deliver"][0]
     return deliver_details["unitsRequired"] <= deliver_details["unitsFulfilled"]
 
 
@@ -233,14 +246,14 @@ def contract_automation(
 
     # for each ship
     contract_info = get_contract_info(contract_id)
-    contract_location = contract_info["data"]["terms"]["deliver"][0][
+    contract_location = contract_info["data"][0]["terms"]["deliver"][0][
         "destinationSymbol"
     ]
 
     # do this loop until contract is fulfilled
     while not contract_is_complete(contract_id):
         # navigate to asteroid field
-        ship_navigate(ship_id, asteroid_field)
+        navigation = ship_navigate(ship_id, asteroid_field)
         # dock, refuel, orbit
         ship_dock(ship_id)
         ship_refuel(ship_id)
@@ -256,6 +269,7 @@ def contract_automation(
             ship_dock(ship_id)
 
             # sell non-contract goods
+            sell_non_contract_goods(ship_id, contract_id)
 
             # orbit
             ship_orbit(ship_id)
