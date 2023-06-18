@@ -1,10 +1,14 @@
 import os
+import json
 import requests
-from pprint import pprint
 from typing import Tuple
 
 _token = os.environ["TOKEN"]
 _url = "https://api.spacetraders.io"
+
+
+def pprint(data: dict):
+    print(json.dumps(data, indent=4))
 
 
 def get_waypoint_components(waypoint: str) -> Tuple[str, str]:
@@ -45,7 +49,7 @@ def get_contracts() -> dict:
         f"{_url}/v2/my/contracts",
         headers={"Authorization": f"Bearer {_token}"},
     )
-    return response.json()["data"]
+    return response.json()
 
 
 def accept_contract(contract_id: str) -> dict:
@@ -61,10 +65,12 @@ def main():
     headquarters = agent_info["data"]["headquarters"]
 
     sector, system = get_waypoint_components(headquarters)
+    waypoints = get_waypoints(system)
+    pprint(waypoints)
 
     contracts = get_contracts()
-    contract = contracts[0]
-    pprint(accept_contract(contract["id"]))
+    contract = contracts["data"][0]
+    pprint(contract)
 
 
 if __name__ == "__main__":
