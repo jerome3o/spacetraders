@@ -19,10 +19,11 @@ def is_past(timestamp: str) -> bool:
     current_time = datetime.now(timezone.utc)
     return current_time > datetime_obj
 
+
 def wait_until(timestamp: str):
+    print(f"waiting till {timestamp}")
     while not is_past(timestamp):
         time.sleep(10)
-
 
 
 def get_waypoint_components(waypoint: str) -> Tuple[str, str]:
@@ -161,7 +162,9 @@ def contract_deliver_all_available(
     ship_info = get_ship_info(ship_id)
     cargo_info = ship_info["data"]["cargo"]
 
-    relevant_cargo_symbol = contract_info["data"]["terms"]["deliver"][0]["tradeSymbol"]
+    relevant_cargo_symbol = contract_info["data"][0]["terms"]["deliver"][0][
+        "tradeSymbol"
+    ]
 
     relevant_cargo_units = 0
     for cargo in cargo_info["inventory"]:
@@ -197,7 +200,9 @@ def ready_to_deliver(contract_id: str, ship_id: str) -> bool:
     cargo_info = ship_info["data"]["cargo"]
 
     capacity = cargo_info["capacity"]
-    relevant_cargo_symbol = contract_info["data"]["terms"]["deliver"][0]["tradeSymbol"]
+    relevant_cargo_symbol = contract_info["data"][0]["terms"]["deliver"][0][
+        "tradeSymbol"
+    ]
 
     relevant_cargo_units = 0
     for cargo in cargo_info["inventory"]:
@@ -254,13 +259,23 @@ def contract_automation(
     while not contract_is_complete(contract_id):
         # navigate to asteroid field
         navigation = ship_navigate(ship_id, asteroid_field)
+
+        already_there = False
+        if "error" in navigation:
+            already_there = navigation["error"]["code"] == 4204
+            if navigation["error"]["code"] == 4214:
+                wait_until(navigation["error"]["data"]["arrival"])
+
+        if not already_there:
+            wait_until(navigation["data"]["nav"]["route"]["arrival"])
+
         # dock, refuel, orbit
         ship_dock(ship_id)
         ship_refuel(ship_id)
         ship_orbit(ship_id)
 
         # do this loop until 90% cargo full of contract goods
-        while ready_to_deliver(contract_id, ship_id):
+        while not ready_to_deliver(contract_id, ship_id):
             while not ship_is_full(ship_id):
                 # extract from the asteroid field untill cargo full
                 ship_extract(ship_id)
@@ -288,8 +303,8 @@ def contract_automation(
 
 
 def main():
-    output = purchase_ship("SHIP_MINING_DRONE", "X1-ZT91-25027X")
-    pprint(output)
+    # output = purchase_ship("SHIP_MINING_DRONE", "X1-ZT91-25027X")
+    # pprint(output)
 
     contract_automation(
         contract_id="",
